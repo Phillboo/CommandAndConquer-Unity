@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -7,11 +8,16 @@ namespace RTS
     {
         public static BuildPlacement Instance { get; private set; }
         public bool IsPlacing => current != null;
+        public const float BuildRadius = 20f;
+
         BuildingData current;
         GameObject ghost;
+        GameObject radiusViz;
         LayerMask groundMask, blockMask;
         static readonly Color okC = new Color(0.2f, 1f, 0.3f, 0.45f);
         static readonly Color badC = new Color(1f, 0.2f, 0.2f, 0.45f);
+        static Texture2D radiusTex;
+        static Material radiusMat;
 
         void Awake()
         {
@@ -34,15 +40,67 @@ namespace RTS
             foreach (var comp in ghost.GetComponentsInChildren<MonoBehaviour>()) comp.enabled = false;
             foreach (var col in ghost.GetComponentsInChildren<Collider>()) col.enabled = false;
             foreach (var obs in ghost.GetComponentsInChildren<NavMeshObstacle>()) obs.enabled = false;
+            ShowRadius();
+        }
+
+        // Gruene Kreise: ueberall hier darf gebaut werden
+        void ShowRadius()
+        {
+            HideRadius();
+            radiusViz = new GameObject("BuildRadiusViz");
+            int i = 0;
+            foreach (var d in Damageable.All)
+            {
+                if (d == null || d.team != Team.Player) continue;
+                if (!(d is Building b) || b.data == null || b.data.id == "Wall") continue;
+                var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                Object.Destroy(q.GetComponent<Collider>());
+                q.transform.SetParent(radiusViz.transform, false);
+                q.transform.position = b.transform.position + Vector3.up * (0.05f + i * 0.004f);
+                q.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                q.transform.localScale = new Vector3(BuildRadius * 2f, BuildRadius * 2f, 1f);
+                q.GetComponent<Renderer>().material = RadiusMat();
+                i++;
+            }
+        }
+
+        void HideRadius()
+        {
+            if (radiusViz != null) Object.Destroy(radiusViz);
+            radiusViz = null;
+        }
+
+        static Material RadiusMat()
+        {
+            if (radiusMat != null) return radiusMat;
+            if (radiusTex == null)
+            {
+                radiusTex = new Texture2D(128, 128, TextureFormat.RGBA32, false);
+                for (int y = 0; y < 128; y++)
+                    for (int x = 0; x < 128; x++)
+                    {
+                        float dx = (x - 63.5f) / 63.5f, dy = (y - 63.5f) / 63.5f;
+                        float r = Mathf.Sqrt(dx * dx + dy * dy);
+                        float a = r <= 0.88f ? 0.13f : (r <= 0.97f ? 0.4f : 0f);
+                        radiusTex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                    }
+                radiusTex.Apply();
+            }
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            radiusMat = new Material(shader);
+            radiusMat.SetTexture("_BaseMap", radiusTex);
+            radiusMat.color = new Color(0.3f, 1f, 0.45f, 1f);
+            MatUtil.MakeTransparent(radiusMat);
+            return radiusMat;
         }
 
         void Tint(bool ok)
         {
-            var mat = MatUtil.Unlit(ok ? okC : badC);
+            var m = MatUtil.Unlit(ok ? okC : badC);
             foreach (var r in ghost.GetComponentsInChildren<Renderer>())
             {
                 var mats = r.materials;
-                for (int i = 0; i < mats.Length; i++) mats[i] = mat;
+                for (int i = 0; i < mats.Length; i++) mats[i] = m;
                 r.materials = mats;
             }
         }
@@ -64,7 +122,12 @@ namespace RTS
                 if (ResourceManager.Instance.TrySpend(Team.Player, current.cost))
                 {
                     GameManager.Instance.SpawnBuilding(current, Team.Player, pos, 45f, false);
-                    Cancel();
+                    if (current.id == "Wall")
+                    {
+                        // Mauern in Serie bauen
+                        if (ResourceManager.Instance.GetCredits(Team.Player) < current.cost) Cancel();
+                    }
+                    else Cancel();
                 }
                 else
                 {
@@ -76,12 +139,13 @@ namespace RTS
 
         bool IsValid(Vector3 pos)
         {
+            // Im Bau-Radius irgendeines eigenen Gebaeudes (ausser Mauern)?
             bool near = false;
             foreach (var d in Damageable.All)
             {
                 if (d == null || d.team != Team.Player || !(d is Building b) || b.data == null) continue;
-                if (b.data.id == "ConYard" && Vector3.Distance(b.transform.position, pos) < 32f)
-                { near = true; break; }
+                if (b.data.id == "Wall") continue;
+                if (Vector3.Distance(b.transform.position, pos) < BuildRadius) { near = true; break; }
             }
             if (!near) return false;
             Vector3 half = new Vector3(current.footprint.x * 0.5f + 0.5f, 2f, current.footprint.y * 0.5f + 0.5f);
@@ -93,6 +157,7 @@ namespace RTS
             current = null;
             if (ghost != null) Object.Destroy(ghost);
             ghost = null;
+            HideRadius();
         }
     }
 }

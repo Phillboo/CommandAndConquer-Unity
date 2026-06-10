@@ -44,6 +44,7 @@ namespace RTS
             }
 
             if (Input.GetMouseButtonDown(1) && !IsPointerOverUI()) RightClick();
+            if (Input.GetKeyDown(KeyCode.D)) TryDeployMCV();
         }
 
         public static bool IsPointerOverUI() =>
@@ -60,6 +61,7 @@ namespace RTS
             if (u != null && u.team == Team.Player)
             {
                 if (!selected.Contains(u)) { selected.Add(u); u.SetSelected(true); }
+                CheckMCVHint();
                 return;
             }
             var b = hit.collider.GetComponentInParent<Building>();
@@ -118,6 +120,38 @@ namespace RTS
                     UIManager.Message("Sammelpunkt gesetzt");
                 }
             }
+        }
+
+        void TryDeployMCV()
+        {
+            foreach (var u in selected)
+            {
+                if (u == null || u.data == null || u.data.id != "MCV") continue;
+                var gm = GameManager.Instance;
+                var yard = gm.GetBuilding("ConYard");
+                Vector3 pos = new Vector3(
+                    Mathf.Round(u.transform.position.x / 2f) * 2f, 0f,
+                    Mathf.Round(u.transform.position.z / 2f) * 2f);
+                Vector3 half = new Vector3(yard.footprint.x * 0.5f + 0.5f, 2f, yard.footprint.y * 0.5f + 0.5f);
+                var hits = Physics.OverlapBox(pos + Vector3.up * 2.2f, half, Quaternion.identity,
+                    LayerMask.GetMask("Units", "Buildings"));
+                bool blocked = false;
+                foreach (var h in hits)
+                    if (h.transform != u.transform && !h.transform.IsChildOf(u.transform))
+                    { blocked = true; break; }
+                if (blocked) { UIManager.Message("Nicht genug Platz zum Entfalten!"); continue; }
+                Object.Destroy(u.gameObject);
+                gm.SpawnBuilding(yard, Team.Player, pos, 45f, false);
+                UIManager.Message("Neuer Bauhof wird errichtet!");
+                return;
+            }
+        }
+
+        void CheckMCVHint()
+        {
+            foreach (var u in selected)
+                if (u != null && u.data != null && u.data.id == "MCV")
+                { UIManager.Message("MBF gewaehlt - Taste D zum Entfalten"); return; }
         }
 
         public void ClearSelection()

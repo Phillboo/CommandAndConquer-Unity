@@ -29,5 +29,16 @@ namespace RTS
         }
 
         public bool HasPower(Team t) => GetEnergy(t) >= 0;
+
+        public void GetEnergyDetail(Team t, out int prod, out int cons)
+        {
+            prod = 0; cons = 0;
+            foreach (var d in Damageable.All)
+                if (d != null && d.team == t && d is Building b && b.Constructed && b.data != null)
+                {
+                    if (b.data.energyDelta >= 0) prod += b.data.energyDelta;
+                    else cons -= b.data.energyDelta;
+                }
+        }
     }
 }

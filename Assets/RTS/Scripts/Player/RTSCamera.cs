@@ -5,7 +5,7 @@ namespace RTS
     public class RTSCamera : MonoBehaviour
     {
         public float panSpeed = 32f;
-        public float edgeSize = 14f;
+        public float edgeSize = 20f;
         public float zoomStep = 90f;
         public float minY = 14f, maxY = 58f;
         public Vector2 limit = new Vector2(62f, 62f);
@@ -17,7 +17,7 @@ namespace RTS
             float dz = Input.GetAxisRaw("Vertical");
 
             Vector3 m = Input.mousePosition;
-            if (m.x >= 0f && m.x <= Screen.width && m.y >= 0f && m.y <= Screen.height)
+            if (m.x > -80f && m.x < Screen.width + 80f && m.y > -80f && m.y < Screen.height + 80f)
             {
                 if (m.x < edgeSize) dx -= 1f;
                 else if (m.x > Screen.width - edgeSize) dx += 1f;

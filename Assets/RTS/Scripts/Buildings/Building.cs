@@ -6,6 +6,7 @@ namespace RTS
     {
         public BuildingData data;
         public bool Constructed { get; private set; }
+        public float BuildProgress { get; private set; }
         public Vector3 rallyPoint;
         protected Transform model;
         GameObject ring;
@@ -30,7 +31,7 @@ namespace RTS
             if (ring != null) ring.SetActive(false);
             rallyPoint = transform.position + transform.forward * 8f;
             if (model != null) fullScale = model.localScale;
-            if (instant) Constructed = true;
+            if (instant) { Constructed = true; BuildProgress = 1f; }
             else
             {
                 buildEnd = Time.time + d.buildTime;
@@ -44,6 +45,7 @@ namespace RTS
             if (Constructed || data == null) return;
             float remain = buildEnd - Time.time;
             float pct = 1f - Mathf.Clamp01(remain / Mathf.Max(0.1f, data.buildTime));
+            BuildProgress = pct;
             if (model != null)
                 model.localScale = new Vector3(fullScale.x, fullScale.y * Mathf.Lerp(0.12f, 1f, pct), fullScale.z);
             hp = Mathf.Max(hp, maxHp * Mathf.Lerp(0.1f, 1f, pct));

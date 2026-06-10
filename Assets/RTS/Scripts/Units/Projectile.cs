@@ -41,7 +41,7 @@ namespace RTS
             if (d.magnitude <= step)
             {
                 if (target != null && target.IsAlive) target.TakeDamage(dmg, owner);
-                Explosion.Spawn(transform.position, 0.6f, new Color(1f, 0.7f, 0.25f));
+                Explosion.Spawn(transform.position, dmg >= 60f ? 1.6f : 0.6f, new Color(1f, 0.7f, 0.25f));
                 Destroy(gameObject);
                 return;
             }

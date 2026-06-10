@@ -6,16 +6,16 @@ namespace RTS
 {
     public class AIController : MonoBehaviour
     {
-        public Vector3 basePos = new Vector3(38f, 0f, 38f);
+        public Vector3 basePos = new Vector3(70f, 0f, 70f);
         float nextThink, nextWave;
         int buildIndex;
         int mixIndex;
 
         static readonly string[] buildOrder =
-        { "PowerPlant", "Refinery", "Barracks", "DefenseTurret", "WarFactory", "PowerPlant", "DefenseTurret", "Refinery" };
+        { "PowerPlant", "Refinery", "Barracks", "DefenseTurret", "WarFactory", "PowerPlant", "Radar", "HeavyTurret", "Refinery", "DefenseTurret", "PowerPlant", "HeavyTurret" };
 
         static readonly string[] armyMix =
-        { "Infantry", "Infantry", "RocketSquad", "TankLight", "Infantry", "TankLight", "RocketSquad", "TankHeavy" };
+        { "Infantry", "Infantry", "RocketSquad", "TankLight", "Infantry", "V2Launcher", "TankLight", "RocketSquad", "TankHeavy", "V2Launcher" };
 
         void Start()
         {
@@ -108,7 +108,7 @@ namespace RTS
                 Vector2 r = Random.insideUnitCircle * 24f;
                 Vector3 p = basePos + new Vector3(r.x, 0f, r.y);
                 p = new Vector3(Mathf.Round(p.x / 2f) * 2f, 0f, Mathf.Round(p.z / 2f) * 2f);
-                if (Mathf.Abs(p.x) > 56f || Mathf.Abs(p.z) > 56f) continue;
+                if (Mathf.Abs(p.x) > 96f || Mathf.Abs(p.z) > 96f) continue;
                 Vector3 half = new Vector3(bd.footprint.x * 0.5f + 1f, 2f, bd.footprint.y * 0.5f + 1f);
                 if (!Physics.CheckBox(p + Vector3.up * 2.2f, half, Quaternion.identity,
                         LayerMask.GetMask("Units", "Buildings")))

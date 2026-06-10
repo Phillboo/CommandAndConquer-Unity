@@ -14,6 +14,11 @@ public static class RTSSetup
     [MenuItem("RTS/Setup Scene")]
     public static void Setup()
     {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            Debug.LogWarning("RTS Setup: Bitte zuerst den Play-Modus beenden!");
+            return;
+        }
         EnsureTagsAndLayers();
         EnsureFolders();
         CreateData();
@@ -75,6 +80,8 @@ public static class RTSSetup
         U("Harvester", "Sammler", "Unit_Harvester", 1400, 12f, 600, 4.2f, 0f, 0f, 1f, 0f, 0f, true, Factory.WarFactory, 0.95f, 2.6f);
         U("TankLight", "Leichter Panzer", "Unit_TankLight", 700, 9f, 300, 6f, 22f, 9f, 1.4f, 12f, 30f, false, Factory.WarFactory, 0.8f, 2f);
         U("TankHeavy", "Schwerer Panzer", "Unit_TankHeavy", 1500, 14f, 700, 3.6f, 55f, 10f, 2.4f, 13f, 30f, false, Factory.WarFactory, 0.95f, 2.4f);
+        U("V2Launcher", "V2-Werfer", "Unit_V2Launcher", 900, 11f, 220, 4.5f, 90f, 18f, 6f, 16f, 11f, false, Factory.WarFactory, 0.8f, 2.4f);
+        U("MCV", "MBF (Bauhof)", "Unit_MCV", 2500, 18f, 800, 3.5f, 0f, 0f, 1f, 0f, 0f, false, Factory.WarFactory, 1.0f, 2.8f);
 
         B("ConYard", "Bauhof", "Bldg_ConstructionYard", 0, 0f, 1500, 25, new Vector2(5.5f, 5.5f), false, false, 5f);
         B("PowerPlant", "Kraftwerk", "Bldg_PowerPlant", 300, 8f, 400, 100, new Vector2(4.5f, 4.5f), true, false, 5.5f);
@@ -82,6 +89,9 @@ public static class RTSSetup
         B("Barracks", "Kaserne", "Bldg_Barracks", 400, 8f, 500, -20, new Vector2(4.5f, 3.5f), true, false, 4f);
         B("WarFactory", "Waffenfabrik", "Bldg_WarFactory", 1000, 12f, 800, -30, new Vector2(5.5f, 4.5f), true, false, 4.5f);
         B("DefenseTurret", "Geschuetzturm", "Bldg_DefenseTurret", 600, 8f, 400, -20, new Vector2(2.5f, 2.5f), true, true, 3.5f);
+        B("HeavyTurret", "Kanonenturm", "Bldg_HeavyTurret", 1200, 10f, 650, -30, new Vector2(2.8f, 2.8f), true, true, 4f);
+        B("Radar", "Radar", "Bldg_Radar", 1000, 10f, 600, -40, new Vector2(4.5f, 4.5f), true, false, 5f);
+        B("Wall", "Mauer", "Bldg_Wall", 50, 1.5f, 300, 0, new Vector2(2f, 1f), true, false, 2.2f);
         AssetDatabase.SaveAssets();
     }
 
@@ -260,6 +270,33 @@ public static class RTSSetup
         return m;
     }
 
+    static Material WaterMat()
+    {
+        string p = MatDir + "/Water.mat";
+        var m = AssetDatabase.LoadAssetAtPath<Material>(p);
+        if (m != null) return m;
+        m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        m.SetColor("_BaseColor", new Color(0.16f, 0.42f, 0.62f));
+        m.SetFloat("_Smoothness", 0.9f);
+        m.SetFloat("_Metallic", 0.1f);
+        AssetDatabase.CreateAsset(m, p);
+        return m;
+    }
+
+    static Material SkirtMat()
+    {
+        string p = MatDir + "/SandSkirt.mat";
+        var m = AssetDatabase.LoadAssetAtPath<Material>(p);
+        if (m != null) return m;
+        m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        m.SetTexture("_BaseMap", SandTex());
+        m.SetTextureScale("_BaseMap", new Vector2(60f, 60f));
+        m.SetColor("_BaseColor", new Color(0.72f, 0.62f, 0.47f));
+        m.SetFloat("_Smoothness", 0.02f);
+        AssetDatabase.CreateAsset(m, p);
+        return m;
+    }
+
     static Texture2D SandTex()
     {
         string p = MatDir + "/SandTex.asset";
@@ -295,17 +332,27 @@ public static class RTSSetup
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "Ground";
         ground.transform.SetParent(world.transform);
-        ground.transform.localScale = new Vector3(12.8f, 1f, 12.8f);
+        ground.transform.localScale = new Vector3(20f, 1f, 20f);
         ground.layer = LayerMask.NameToLayer("Ground");
         ground.GetComponent<Renderer>().sharedMaterial = SandMat();
         SetNavStatic(ground);
 
+        // Optische Sand-Schuerze rund um die Karte (nicht bespielbar)
+        var skirt = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        skirt.name = "Skirt";
+        skirt.transform.SetParent(world.transform);
+        skirt.transform.position = new Vector3(0f, -0.4f, 0f);
+        skirt.transform.localScale = new Vector3(90f, 1f, 90f);
+        Object.DestroyImmediate(skirt.GetComponent<Collider>());
+        skirt.GetComponent<Renderer>().sharedMaterial = SkirtMat();
+
         // Felsen als natuerliche Barriere (mit Luecken)
         var rocksFbx = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Prop_Rocks.fbx");
         Vector2[] rockPos = {
-            new Vector2(-36,30), new Vector2(-28,24), new Vector2(-20,16), new Vector2(-12,10),
-            new Vector2(-6,4), new Vector2(8,-8), new Vector2(14,-14), new Vector2(22,-22),
-            new Vector2(30,-28), new Vector2(36,-34), new Vector2(-48,-2), new Vector2(50,6)
+            new Vector2(-64,54), new Vector2(-50,43), new Vector2(-36,29), new Vector2(-22,18),
+            new Vector2(-11,7), new Vector2(14,-14), new Vector2(25,-25), new Vector2(40,-40),
+            new Vector2(54,-50), new Vector2(65,-61), new Vector2(-86,-4), new Vector2(90,11),
+            new Vector2(-4,52), new Vector2(4,-56)
         };
         var rnd = new System.Random(42);
         foreach (var rp in rockPos)
@@ -326,12 +373,70 @@ public static class RTSSetup
             SetNavStatic(rock);
         }
 
+        // Gebirgszuege (grosse Felscluster, blockieren Wege)
+        Vector2[] ridgePos = {
+            new Vector2(-30,62), new Vector2(-42,68), new Vector2(-78,52),
+            new Vector2(34,-64), new Vector2(46,-70), new Vector2(80,-46)
+        };
+        foreach (var rp in ridgePos)
+        {
+            var mt = (GameObject)PrefabUtility.InstantiatePrefab(rocksFbx);
+            mt.name = "Mountain";
+            mt.transform.SetParent(world.transform);
+            mt.transform.position = new Vector3(rp.x, 0f, rp.y);
+            mt.transform.rotation = Quaternion.Euler(0f, (float)rnd.NextDouble() * 360f, 0f);
+            float ms = 3.2f + (float)rnd.NextDouble() * 1.4f;
+            mt.transform.localScale = new Vector3(ms, ms * 1.3f, ms);
+            foreach (var mf in mt.GetComponentsInChildren<MeshFilter>())
+            {
+                mf.gameObject.AddComponent<MeshCollider>();
+                mf.gameObject.layer = LayerMask.NameToLayer("Buildings");
+            }
+            SetNavStatic(mt);
+        }
+
+        // Deko-Berge ausserhalb der Spielflaeche
+        Vector2[] decoPos = {
+            new Vector2(-130,40), new Vector2(-120,-90), new Vector2(125,80),
+            new Vector2(135,-50), new Vector2(40,128), new Vector2(-60,-128)
+        };
+        foreach (var dp in decoPos)
+        {
+            var deco = (GameObject)PrefabUtility.InstantiatePrefab(rocksFbx);
+            deco.name = "DecoMountain";
+            deco.transform.SetParent(world.transform);
+            deco.transform.position = new Vector3(dp.x, -0.3f, dp.y);
+            deco.transform.rotation = Quaternion.Euler(0f, (float)rnd.NextDouble() * 360f, 0f);
+            float ds = 6f + (float)rnd.NextDouble() * 3f;
+            deco.transform.localScale = new Vector3(ds, ds * 1.5f, ds);
+        }
+
+        // Fluss quer ueber die Karte (zwei Furten als Engstellen)
+        var waterMat = WaterMat();
+        for (float x = -98f; x <= 98f; x += 4f)
+        {
+            if ((x > -62f && x < -46f) || (x > 42f && x < 58f)) continue; // Furten
+            var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            seg.name = "River";
+            seg.transform.SetParent(world.transform);
+            float zMid = 10f + Mathf.Sin(x * 0.05f) * 6f;
+            seg.transform.position = new Vector3(x, 0.03f, zMid);
+            seg.transform.localScale = new Vector3(4.3f, 0.12f, 10f);
+            seg.GetComponent<Renderer>().sharedMaterial = waterMat;
+            seg.layer = LayerMask.NameToLayer("Buildings");
+            var bc = seg.GetComponent<BoxCollider>();
+            bc.size = new Vector3(1f, 20f, 1f); // unsichtbarer Bau-Blocker
+            SetNavStatic(seg);
+            SetNotWalkable(seg);
+        }
+
         // Tiberium-Felder
         var tibFbx = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Prop_Tiberium.fbx");
         Vector2[] fields = {
-            new Vector2(-22,-38), new Vector2(-38,-22),
-            new Vector2(22,38), new Vector2(38,22),
-            new Vector2(-14,14), new Vector2(14,-14)
+            new Vector2(-42,-70), new Vector2(-70,-42),
+            new Vector2(42,70), new Vector2(70,42),
+            new Vector2(-26,26), new Vector2(26,-26),
+            new Vector2(-72,30), new Vector2(72,-30)
         };
         foreach (var fp in fields)
         {
@@ -369,8 +474,8 @@ public static class RTSSetup
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.79f, 0.71f, 0.56f);
-        RenderSettings.fogStartDistance = 90f;
-        RenderSettings.fogEndDistance = 220f;
+        RenderSettings.fogStartDistance = 130f;
+        RenderSettings.fogEndDistance = 340f;
 
         // Kamera
         var camGo = GameObject.Find("Main Camera");
@@ -383,9 +488,12 @@ public static class RTSSetup
         var cam = camGo.GetComponent<Camera>();
         cam.farClipPlane = 400f;
         cam.cullingMask = ~(1 << LayerMask.NameToLayer("Minimap"));
-        camGo.transform.position = new Vector3(-55f, 28f, -55f);
+        camGo.transform.position = new Vector3(-88f, 30f, -88f);
         camGo.transform.rotation = Quaternion.Euler(50f, 45f, 0f);
-        if (camGo.GetComponent<RTSCamera>() == null) camGo.AddComponent<RTSCamera>();
+        var rtsCam = camGo.GetComponent<RTSCamera>();
+        if (rtsCam == null) rtsCam = camGo.AddComponent<RTSCamera>();
+        rtsCam.limit = new Vector2(105f, 105f);
+        rtsCam.maxY = 72f;
 
         // Manager
         var mgr = new GameObject("RTS_Managers");
@@ -395,7 +503,7 @@ public static class RTSSetup
         mgr.AddComponent<BuildPlacement>();
         mgr.AddComponent<UIManager>();
         var ai = mgr.AddComponent<AIController>();
-        ai.basePos = new Vector3(38f, 0f, 38f);
+        ai.basePos = new Vector3(70f, 0f, 70f);
         mgr.AddComponent<GameBootstrap>();
     }
 
@@ -404,6 +512,14 @@ public static class RTSSetup
 #pragma warning disable 618
         foreach (var t in go.GetComponentsInChildren<Transform>(true))
             GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.NavigationStatic);
+#pragma warning restore 618
+    }
+
+    static void SetNotWalkable(GameObject go)
+    {
+#pragma warning disable 618
+        foreach (var t in go.GetComponentsInChildren<Transform>(true))
+            GameObjectUtility.SetNavMeshArea(t.gameObject, 1); // 1 = Not Walkable
 #pragma warning restore 618
     }
 

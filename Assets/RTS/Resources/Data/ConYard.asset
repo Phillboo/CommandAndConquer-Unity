@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 285033405df20b045a512cec86d140e5, type: 3}
+  m_Name: ConYard
+  m_EditorClassIdentifier: 
+  id: ConYard
+  displayName: Bauhof
+  modelFile: Bldg_ConstructionYard
+  cost: 0
+  buildTime: 0
+  maxHp: 1500
+  energyDelta: 25
+  footprint: {x: 5.5, y: 5.5}
+  isDefense: 0
+  buildable: 0
+  damage: 20
+  attackRange: 13
+  attackRate: 0.8
+  hbHeight: 5

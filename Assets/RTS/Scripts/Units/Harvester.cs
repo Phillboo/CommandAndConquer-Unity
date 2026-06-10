@@ -56,7 +56,8 @@ namespace RTS
                 case HState.Unloading:
                     if (Time.time >= unloadDone)
                     {
-                        ResourceManager.Instance.Add(team, Mathf.RoundToInt(load));
+                        if (ResourceManager.Instance != null)
+                            ResourceManager.Instance.Add(team, Mathf.RoundToInt(load));
                         load = 0f;
                         state = HState.Idle;
                     }
@@ -84,12 +85,19 @@ namespace RTS
 
         Building FindRefinery()
         {
+            Building best = FindDropoff("Refinery");
+            if (best == null) best = FindDropoff("ConYard"); // Notloesung: am Bauhof abliefern
+            return best;
+        }
+
+        Building FindDropoff(string id)
+        {
             Building best = null;
             float bd = float.MaxValue;
             foreach (var d in All)
             {
                 if (d == null || d.team != team) continue;
-                if (d is Building b && b.Constructed && b.data != null && b.data.id == "Refinery")
+                if (d is Building b && b.Constructed && b.data != null && b.data.id == id)
                 {
                     float dist = (b.transform.position - transform.position).sqrMagnitude;
                     if (dist < bd) { bd = dist; best = b; }
